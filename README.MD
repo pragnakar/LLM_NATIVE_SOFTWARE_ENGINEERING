@@ -1,207 +1,56 @@
-# LLM-Native Software Engineering
+# LLM-Native Software Engineering Meta-Prompt
 
-**A protocol for coordinating human and artificial intelligence in software development**
+A protocol for coordinating human architects and LLM coding agents in software development through structured control documents, phased build workflows, and mandatory verification discipline.
 
----
+## What Is a Meta-Prompt?
 
-## Overview
-
-This repository hosts the document **“LLM-Native Software Engineering”**, a methodology for building production-grade software with large language model (LLM) coding agents.
-
-The document describes a structured workflow where **humans and AI agents collaborate through explicit coordination protocols** rather than informal prompts. It outlines a development model where architectural intent, implementation tasks, and project state are communicated through structured artifacts.
-
-At its core, this repository contains a **meta prompt**.
-
-The methodology document acts as a **meta prompt layer** that runs **before any project-specific prompt**. Its purpose is to establish the build environment, behavioral constraints, and workflow rules that govern how AI agents participate in the development process.
-
-In practice, the meta prompt initializes the development protocol so that subsequent prompts operate inside a **consistent, structured build system** rather than a blank conversational context.
-
----
-
-## What This Repository Contains
+A meta-prompt is a structured protocol document that initializes an AI-assisted development environment before task execution begins. Instead of starting with an ad-hoc task prompt, the meta-prompt establishes workflow structure, behavioral constraints, verification discipline, and state tracking — so that subsequent prompts operate inside a disciplined build system rather than a blank conversational context.
 
 ```
-.
-├── README.md
-└── LLM-Native Software Engineering.md
+meta-prompt (environment and protocol initialization)
+     ↓
+task prompt (what to build)
+     ↓
+AI execution within that structured environment
 ```
 
-| File                                   | Description                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------ |
-| **LLM-Native Software Engineering.md** | The main methodology document describing the protocol for AI-assisted software development |
-| **README.md**                          | Repository overview and usage guidance                                                     |
+## This Meta-Prompt
 
----
+LLM-Native Software Engineering is the parent meta-prompt in the ecosystem. It defines:
 
-## What Is a Meta Prompt?
+- **Three Control Documents** — Directive (AGENT.md), Specification (SPEC.md), and Build Log (BUILD_LOG.md) — which serve as the communication protocol between human architects and AI builders
+- **The Phase Protocol** — a four-step cycle (prompt → build → verify → approve) that catches integration bugs unit tests cannot detect
+- **The .build directory system** — a project-local state machine that evolves from static documents toward an Agent Development Runtime
+- **The security model** for agentic development, including agent identity, permission scopes, and secret scanning
 
-A **meta prompt** is a prompt that **prepares and constrains the environment in which other prompts run**.
+This methodology was developed through the construction of SAGE, a production-quality MCP server built entirely with LLM-assisted development across seven phases.
 
-Instead of immediately instructing an AI agent to build software, the meta prompt establishes:
+## Part of the Meta-Prompt Ecosystem
 
-* architectural rules
-* behavioral constraints
-* development workflow
-* verification discipline
-* build state tracking
+This meta-prompt orchestrates companion protocols invoked as needed during the development lifecycle:
 
-This ensures that subsequent prompts operate inside a **well-defined development system** rather than relying on ad-hoc instructions.
+| Meta-Prompt | Repository | Purpose |
+|---|---|---|
+| LLM-Native Software Engineering | https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING | Architecture and application development |
+| Deployment Engineering | https://github.com/pragnakar/Deployment_Engineering | Infrastructure, containerization, and deployment |
+| DevOps | https://github.com/pragnakar/DevOps | Runtime operations, observability, and reliability |
+| Database | https://github.com/pragnakar/Database | Data persistence, schema design, and management |
+| UI/UX | https://github.com/pragnakar/UI-UX | Interface and experience design |
 
-Conceptually:
+## Usage
 
-```
-Meta Prompt (Environment Setup)
-        ↓
-Project Prompt (What to Build)
-        ↓
-Agent Implementation
-        ↓
-Verification & Iteration
-```
+1. Load `LLM_NATIVE_SOFTWARE_ENGINEERING.md` into your AI coding agent at the start of a session
+2. The agent initializes the development protocol: spec-first design, phased builds, verification discipline, persistent build state
+3. Provide the project-specific prompt (what to build)
+4. The agent creates control documents (AGENT.md, SPEC.md, BUILD_LOG.md) and begins Phase 1
+5. Invoke companion meta-prompts as relevant domains become active
 
-The meta prompt therefore acts as a **development protocol** rather than a task instruction.
-
----
-
-## Why This Exists
-
-LLM coding agents are powerful implementers but they exhibit several well-known weaknesses when building complex systems:
-
-| Challenge                   | Description                                          |
-| --------------------------- | ---------------------------------------------------- |
-| Context loss                | Sessions reset and forget previous progress          |
-| Architectural drift         | Agents make local decisions that break global design |
-| Silent integration failures | Unit tests pass but the full system fails            |
-| Inconsistent workflows      | Each session behaves differently                     |
-| Lack of persistent memory   | Agents cannot track build progress across sessions   |
-
-The methodology described in this repository addresses these issues by introducing a **protocol-driven development environment**.
-
-The core mechanism is a set of **control documents** that act as a communication interface between human architects and AI builders.
-
----
-
-## The Three Control Documents
-
-The methodology relies on three primary artifacts:
-
-| Document                     | Role                                               |
-| ---------------------------- | -------------------------------------------------- |
-| **Directive (AGENT.md)**     | Defines agent behavior and development constraints |
-| **Specification (SPEC.md)**  | Defines the architecture and system design         |
-| **Build Log (BUILD_LOG.md)** | Tracks project state across sessions               |
-
-Together they form a **coordination protocol** that enables consistent collaboration between humans and AI agents.
-
----
-
-## How the Meta Prompt Is Used
-
-When starting a new AI-assisted development project, the workflow typically looks like this:
-
-1. **Load the meta prompt**
-
-   The document in this repository is provided to the AI agent first.
-
-2. **Initialize the build environment**
-
-   The agent understands the protocol:
-
-   * specification-first design
-   * phased development
-   * verification discipline
-   * persistent build state
-
-3. **Run the project prompt**
-
-   A project-specific prompt then instructs the agent what system to build.
-
-4. **Execute development phases**
-
-   The agent follows the methodology defined by the meta prompt.
-
-5. **Verify and iterate**
-
-   Each phase includes verification steps before continuing.
-
----
-
-## Example Workflow
-
-```
-1. Load LLM-Native Software Engineering.md
-2. Provide project specification prompt
-3. Agent generates SPEC.md and AGENT.md
-4. Development proceeds in structured phases
-5. Verification checks ensure system coherence
-```
-
-The meta prompt ensures that **every project begins inside a disciplined build environment** rather than starting from an unstructured prompt.
-
----
-
-## Evolution of the Meta Prompt
-
-This document is **not static**.
-
-It is designed to evolve as AI-assisted development practices mature.
-
-Over time, the methodology may incorporate:
-
-* improved verification workflows
-* agent orchestration patterns
-* integration with CI/CD pipelines
-* external build state systems
-* multi-agent coordination models
-
-Because this document functions as a **meta prompt**, improvements to the protocol immediately benefit every project that adopts it.
-
----
-
-## Intended Audience
-
-This repository is intended for:
-
-* developers using AI coding agents
-* teams exploring AI-assisted software development
-* researchers studying agentic development workflows
-* engineers designing AI-native tooling systems
-
----
-
-## Status
-
-This methodology was originally derived from the development of **Project SAGE**, a production-quality MCP server built entirely with LLM-assisted development.
-
-The workflow is **experimental but operational**, and it is expected to evolve as more real-world builds are conducted using this approach.
-
----
-
-## Contributing
-
-Suggestions, improvements, and discussions are welcome.
-
-Possible areas of contribution include:
-
-* improved verification protocols
-* multi-agent coordination models
-* CI/CD integration
-* specification tooling
-* security models for agentic development environments
-
----
+For quick setup, use the Quick-Start Checklist in Appendix B of the meta-prompt document.
 
 ## License
 
-This repository is intended to be open and collaborative.
-License information will be defined as the project evolves.
+Open and collaborative. License information will be defined as the project evolves.
 
----
+## Author
 
-## Final Note
-
-This repository proposes a shift in how software development is coordinated when AI agents are involved.
-
-Instead of treating AI as a coding assistant, the methodology treats development as a **protocol-governed collaboration between humans and artificial agents**.
-
-The meta prompt defines that protocol.
+Pragnakar Pedapenki

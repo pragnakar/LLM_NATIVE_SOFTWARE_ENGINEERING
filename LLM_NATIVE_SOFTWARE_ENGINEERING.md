@@ -6,6 +6,7 @@
 **Author:** Pragnakar Pedapenki
 **Repository:** https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING
 **Applicability:** Claude Code, Cursor, Windsurf, GitHub Copilot, Aider, and any LLM-based coding system
+**Companion Meta-Prompts:** Deployment Engineering, DevOps, Database, UI-UX
 
 ---
 
@@ -850,3 +851,15 @@ The specification is the contract. The directive is the culture. The build log i
 *This methodology was developed through practical application, refined through external critique, and published as an open-source meta-prompt. It is itself an artifact of the paradigm it describes: AI execution governed by human architecture, coordinated through shared protocol documents.*
 
 *GitHub: https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING*
+
+---
+
+## Version History
+
+- v3.0 — Current — Added Agent Development Runtime (ADR), security model for agentic development, cross-repository knowledge system, full meta-prompt ecosystem section with companion repositories
+- v2.0 — Added Phase Protocol (prompt → build → verify → approve), verification evidence table from SAGE build, git strategy with phase tags, pre-commit security section
+- v1.0 — Initial publication: Three Control Documents (Directive, Specification, Build Log), .build directory structure, known limitations
+
+---
+
+*Part of the Meta-Prompt Ecosystem: https://github.com/pragnakar*
