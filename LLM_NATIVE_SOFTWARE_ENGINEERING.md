@@ -2,10 +2,46 @@
 
 ## A Protocol for Coordinating Human and Artificial Intelligence in Software Development
 
-**Version:** 2.0
-**Origin:** Derived from the SAGE build (5,861 lines, 459 tests, 7 phases, 0 failures at ship), March 2026
+**Version:** 3.0
 **Author:** Pragnakar Pedapenki
-**Applicability:** Claude Code, Cursor, Windsurf, GitHub Copilot, Aider, and any LLM-based coding system — present and future
+**Repository:** https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING
+**Applicability:** Claude Code, Cursor, Windsurf, GitHub Copilot, Aider, and any LLM-based coding system
+
+---
+
+## Thesis
+
+LLM-native software engineering requires explicit coordination protocols between agents — human or artificial.
+
+These protocols take the form of three control documents: a **directive** (culture), a **specification** (contract), and a **build log** (memory). Together, they function as a communication substrate that enables reliable software construction regardless of which agents — human developers, AI coding assistants, or autonomous agent swarms — are doing the building.
+
+Software development with LLMs is becoming a **protocol problem**, not a coding problem.
+
+---
+
+## What This Document Is
+
+This document serves as a **meta-prompt** — a prompt that runs before the actual task prompt. Its purpose is not to perform a task, but to initialize the environment in which the task will run.
+
+Instead of:
+
+```
+task prompt → AI response
+```
+
+The workflow becomes:
+
+```
+meta-prompt (environment and protocol initialization)
+     ↓
+task prompt (what to build)
+     ↓
+AI execution within that structured environment
+```
+
+The meta-prompt defines workflow structure, behavioral constraints, verification discipline, state tracking, and architectural rules. It establishes the protocol for how AI and humans collaborate.
+
+This methodology was developed through the construction of a non-trivial software project (SAGE — a 7-phase, multi-package MCP server) built from blank repository to shipped v0.1.0 using a two-instance architecture where a conversational AI designed the system and a coding AI implemented it. Every element in this document earned its place by catching a defect, preventing a regression, or saving significant rework during that build.
 
 ---
 
@@ -13,25 +49,7 @@
 
 ---
 
-## 1. What This Document Is
-
-This document defines a repeatable methodology for building production-quality software using LLM coding agents. It was developed through the construction of SAGE (Solver-Augmented Generation Engine) — a non-trivial MCP server built from blank repository to shipped v0.1.0 using a two-instance architecture where a conversational AI designed the system and a coding AI implemented it.
-
-The methodology addresses five problems that emerge when LLMs build software at scale:
-
-| Problem | What Goes Wrong | How This Methodology Prevents It |
-|---|---|---|
-| Context loss | New sessions start with zero memory | BUILD_LOG.md provides persistent state |
-| Architectural drift | Local decisions violate global design | SPEC.md + phase boundaries enforce coherence |
-| Silent integration bugs | Unit tests pass, system is broken | Verification prompts test across boundaries |
-| Scope creep | Agent "helpfully" adds unrequested features | Phase prompts define bounded scope |
-| Session amnesia | Agent repeats or contradicts prior work | Directive + build log restore full context |
-
-This is not theoretical. Every element was tested under real build conditions. Eight ship-blocking bugs were caught exclusively by the verification discipline — none would have been found by unit tests alone.
-
----
-
-## 2. The Core Insight
+### 1. The Core Insight
 
 LLM coding agents are strong implementers but unreliable architects.
 
@@ -40,7 +58,7 @@ LLM coding agents are strong implementers but unreliable architects.
 | Architect / system thinker | Weak — inconsistent |
 | Implementer | Strong |
 | Refactorer | Strong |
-| Tester (unit) | Moderate — tends to test happy paths |
+| Tester (unit) | Moderate — biased toward happy paths |
 | Integration verifier | Weak without explicit prompting |
 
 This asymmetry produces a characteristic failure mode: **local correctness with global incoherence.** The agent writes `db.py`, `cache.py`, and `api.py` — each individually correct, but collectively violating the architecture.
@@ -48,46 +66,51 @@ This asymmetry produces a characteristic failure mode: **local correctness with 
 The solution is separation of concerns:
 
 ```
-┌──────────────────────────────────┐
-│  ARCHITECT LAYER                  │
-│  (Conversational AI or Human)     │
-│                                   │
-│  • Designs architecture           │
-│  • Writes specifications          │
-│  • Creates phase prompts          │
-│  • Reviews and approves           │
-│  • Makes trade-off decisions      │
-│  • Resolves ambiguity             │
-└───────────────┬──────────────────┘
-                │  Control Documents
-                ▼
-┌──────────────────────────────────┐
-│  BUILDER LAYER                    │
-│  (LLM Coding Agent)              │
-│                                   │
-│  • Reads specifications           │
-│  • Implements bounded tasks       │
-│  • Writes tests                   │
-│  • Updates build log              │
-│  • Reports status                 │
-│  • Never makes architectural      │
-│    decisions                      │
-└──────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  ARCHITECT LAYER                      │
+│  (Conversational AI or Human)         │
+│                                       │
+│  • Designs architecture               │
+│  • Writes specifications              │
+│  • Creates phase prompts              │
+│  • Reviews and approves               │
+│  • Makes trade-off decisions          │
+│  • Resolves ambiguity                 │
+└────────────────┬─────────────────────┘
+                 │  Control Documents
+                 ▼
+┌──────────────────────────────────────┐
+│  BUILDER LAYER                        │
+│  (LLM Coding Agent)                  │
+│                                       │
+│  • Reads specifications               │
+│  • Implements bounded tasks           │
+│  • Writes tests                       │
+│  • Updates build log                  │
+│  • Reports status                     │
+│  • Never makes architectural decisions│
+└──────────────────────────────────────┘
 ```
 
 The Architect produces control documents. The Builder executes them. The Builder never decides *what* to build — only *how* to implement what was specified.
 
 ---
 
-## 3. The Three Control Documents
+### 2. The Three Control Documents
 
-Every project requires three control documents. They serve as the communication protocol between architect and builder — analogous to APIs between services, or network protocols between machines. Replace either agent (human or AI) and the protocol still works.
+Every project requires three control documents. They serve as the communication protocol between architect and builder — analogous to APIs between services or network protocols between machines.
 
-### 3.1 The Directive File — AGENT.md
+| Document | Distributed System Analogy | Function |
+|---|---|---|
+| AGENT.md (Directive) | Runtime policy | Culture — how the agent behaves |
+| SPEC.md (Specification) | Interface contract | Contract — what to build |
+| BUILD_LOG.md (Build Log) | System state | Memory — where we are |
+
+#### 2.1 The Directive — AGENT.md
 
 **Purpose:** Tells the coding agent WHO it is, WHAT it's building, and HOW to behave.
 
-**Naming conventions by platform:**
+**Platform-specific naming:**
 
 | Platform | Filename |
 |---|---|
@@ -108,19 +131,19 @@ One-paragraph description.
 "Before writing any code, read SPEC.md."
 
 ## Architecture
-High-level structure. Where code goes. Module responsibilities.
+High-level structure. Module responsibilities.
 
 ## Tech Stack
 Languages, frameworks, libraries, exact versions.
 
 ## Build Order
-Numbered phase sequence. Agent follows this exactly.
+Numbered phase sequence.
 
 ## Critical Design Rules
-Non-negotiable constraints. Things the agent must NEVER do.
+Non-negotiable constraints.
 
 ## Code Style
-Type hints, docstrings, naming, logging rules.
+Type hints, docstrings, naming, logging.
 
 ## Testing
 How to run tests. Known correct values.
@@ -129,135 +152,72 @@ How to run tests. Known correct values.
 Package names and minimum versions.
 
 ## What NOT To Do
-Explicit prohibitions preventing architectural violation.
+Explicit prohibitions.
 ```
 
-**Critical constraint: Keep under 150 lines.** The agent reads this at the start of every session. If it's 500 lines, important instructions get lost in noise. Put details in the SPEC, not the directive.
+**Critical constraint: Keep under 150 lines.** The agent reads this at the start of every session. If it's too long, important instructions get lost. Put details in the SPEC.
 
-**Why it matters:** Without this file, every new session makes its own decisions about structure, naming, testing, and error handling. Those decisions are inconsistent across sessions. The directive is the project's culture — it ensures behavioral continuity regardless of which session or model is executing.
+**Why it matters:** Without this file, every new session makes its own decisions about structure, naming, and error handling — inconsistently. The directive is the project's culture.
 
-### 3.2 The Specification — SPEC.md (or Modular Specs)
+#### 2.2 The Specification — SPEC.md
 
-**Purpose:** Complete technical specification. The architect's design made explicit and machine-readable-enough for an LLM to implement without clarifying questions.
+**Purpose:** Complete technical specification. The architect's design made explicit enough for an LLM to implement without clarifying questions.
 
-**For small-to-medium projects (< 10 modules):** A single `SPEC.md` file works.
+**For small-to-medium projects:** A single `SPEC.md` works.
 
-**For larger projects:** Use modular specifications:
+**For larger projects:** Use modular specifications to prevent spec drift:
 
 ```
 .build/spec/
-├── architecture.md          ← System-level design
-├── data_models.md           ← Shared schemas and types
-├── api.md                   ← API contracts
+├── architecture.md
+├── data_models.md
+├── api.md
 ├── modules/
-│   ├── solver.md            ← Module-level spec
+│   ├── solver.md
 │   ├── parser.md
-│   ├── fileio.md
 │   └── server.md
-└── schemas/                 ← Machine-readable contracts
-    ├── solver_input.json    ← JSON Schema
-    ├── api.yaml             ← OpenAPI
+└── schemas/                    ← Machine-readable contracts
+    ├── solver_input.json       ← JSON Schema
+    ├── api.yaml                ← OpenAPI
     └── config.schema.json
 ```
 
-**Modular specs solve spec drift.** When the specification is a single large file, it diverges from the codebase after 3-4 phases. With modular specs, each module's specification lives near its implementation and can be updated independently. Machine-readable schemas (JSON Schema, OpenAPI, protobuf) provide an additional layer of truth that can be validated automatically.
+Machine-readable schemas (JSON Schema, OpenAPI, protobuf) provide a layer of truth that can be validated automatically. Parts of the specification should be **executable, not just readable** — this prevents spec drift, where the spec diverges from the codebase after several phases.
 
-**Specification contents per module:**
-
-```markdown
-## Module: [name]
-
-### Purpose
-What this module does and why it exists.
-
-### Public API
-Function signatures with full type hints.
-
-### Data Models
-Complete schema definitions (Pydantic, TypeScript interfaces, etc.)
-
-### Behavior
-What each function does, step by step.
-Input → processing → output, with edge cases.
-
-### Error Handling
-What can go wrong. How each error is handled.
-Error types, messages, recovery paths.
-
-### Dependencies
-What this module imports from other modules.
-
-### Test Cases
-Known-correct inputs and expected outputs.
-```
-
-**Spec versioning:** When the spec changes during build (it always does), track versions:
+**Spec versioning:** Track changes as the spec evolves during build:
 
 ```markdown
 ## Spec Changelog
-- v1.1 (Phase 3): Added objective_quadratic to SolverInput for QP support
-- v1.2 (Phase 5): Changed relaxation ranking from absolute to percentage-based
+- v1.1 (Phase 3): Added objective_quadratic to SolverInput
+- v1.2 (Phase 5): Changed relaxation ranking to percentage-based
 ```
 
-**Why it matters:** The specification is the handoff mechanism. In the SAGE build, the spec was written by a conversational AI during a design session and read by a coding AI that had never seen the conversation. The spec had to contain everything — because the builder had no other context. Ambiguity in the spec becomes bugs in the code.
-
-### 3.3 The Build Log — BUILD_LOG.md
+#### 2.3 The Build Log — BUILD_LOG.md
 
 **Purpose:** Persistent memory across sessions. The coding agent's state file.
 
-**Structure:**
-
-```markdown
-# Build Log
-
-## Current Status
-- Active Phase: [X]
-- Active Branch: [X]
-- Last Completed Task: [X]
-- Next Task: [X]
-- Blockers: [X]
-
-## Session Tracker
-| Session | Date | Phase | Duration | Credits | Notes |
-
-## Phase Progress
-### Phase 1 — [Name]
-- [ ] Task 1
-- [ ] Task 2
-- [ ] **PHASE 1 COMPLETE**
-
-## Design Decisions
-| # | Date | Decision | Rationale |
-
-## Roadblocks & Resolutions
-| # | Date | Blocker | Status | Resolution |
-
-## Dependencies
-| Package | Version | Status | Notes |
-
-## Test Results
-| Phase | Written | Passing | Failing |
-```
-
-**The critical instruction:**
+**The critical instruction that makes it work:**
 
 > "If BUILD_LOG.md already exists, READ IT FIRST before doing anything. Resume from where the log says you left off. Do not repeat completed work."
 
-This single instruction enables session recovery. During the SAGE build, every session interruption (credit limits, timeouts, context window resets) was recovered seamlessly because the new session read the log and knew exactly where to continue.
+This single instruction enables session recovery across credit limits, timeouts, and context window resets.
 
-**Preventing log bloat:** Over time, the build log grows. When it exceeds ~300 lines, compress completed phases into summaries:
+**Preventing bloat:** When the log exceeds ~300 lines, compress completed phases into summaries and archive details:
 
-```markdown
-### Phase 1 — COMPLETE (Summary)
-Project structure, 15 Pydantic schemas, 95 tests passing.
-See .build/archive/phase_1_detail.md for full log.
+```
+.build/state/
+├── BUILD_STATE.md        ← Current status (< 50 lines, always read)
+├── BUILD_SUMMARY.md      ← Compressed phase history (< 200 lines)
+└── archive/
+    ├── phase_1_log.md    ← Full detail for completed phases
+    └── phase_2_log.md
 ```
 
-Active phase retains full detail. Completed phases are summarized. Full history moves to an archive directory.
+The agent reads `BUILD_STATE.md` (tiny, always current). Full logs exist for human review but aren't loaded into agent context.
 
 ---
 
-## 4. The Phase Protocol
+### 3. The Phase Protocol
 
 Software is built in sequential phases. Each phase follows an identical four-step protocol:
 
@@ -266,34 +226,23 @@ PHASE PROMPT ──▶ BUILD ──▶ VERIFY ──▶ APPROVE ──▶ next p
 (architect)      (agent)   (agent)    (human)
 ```
 
-### 4.1 Phase Prompt
+#### 3.1 Phase Prompt
 
 Pre-written by the architect. Specifies:
+- Git branch name
+- Exact scope (files, functions)
+- Spec section references (not repeating content)
+- Test requirements with known-correct values
+- Commit conventions
+- Stop condition: "Do not proceed until I review and approve"
 
-1. **Git branch:** `feature/phase-N-description`
-2. **Exact scope:** Which files to create, which functions to implement
-3. **Spec references:** "Implement per SPEC.md Section 3.4" (not repeating the spec content)
-4. **Test requirements:** What tests to write, with known-correct values
-5. **Commit conventions:** Conventional commit format (`feat:`, `fix:`, `test:`)
-6. **Stop condition:** "Do not proceed to Phase N+1 until I review and approve"
+#### 3.2 Build
 
-**Why pre-written:** Prevents scope creep, ensures consistency, and allows the human to review the plan before committing credits to execution.
+The agent creates the branch, implements code and tests, runs tests, commits, updates the build log, and reports completion.
 
-### 4.2 Build
+#### 3.3 Verification Prompt
 
-The agent executes:
-- Creates branch
-- Implements code + tests (test-driven or test-alongside)
-- Runs tests
-- Commits with conventional messages
-- Updates BUILD_LOG.md
-- Reports completion and stops
-
-### 4.3 Verification Prompt
-
-This is the methodology's most valuable innovation. It is a separate prompt, run after the build, that tests what build-phase tests cannot.
-
-**What verification catches that build tests miss:**
+**The methodology's most valuable innovation.** A separate prompt, run after the build, that tests what build-phase tests cannot:
 
 | Build Tests | Verification Tests |
 |---|---|
@@ -302,157 +251,97 @@ This is the methodology's most valuable innovation. It is a separate prompt, run
 | Happy path | Error paths and edge cases |
 | Schema validity | JSON serialization roundtrips |
 | Current phase only | Full pipeline Phase 1 through N |
-| Pass/fail | Quality (readable? professional? domain-appropriate?) |
+| Pass/fail | Quality (readable? professional?) |
 
-**Structure of a verification prompt:**
+**Evidence — bugs caught exclusively by verification, invisible to unit tests:**
 
-```markdown
-1. Completeness Check
-   Run ALL tests, confirm all functions exist with correct signatures.
+| Phase | Bug | Impact if Missed |
+|---|---|---|
+| 2 | Binary variable bounds silently ignored | Wrong scheduling assignments |
+| 2 | `float('inf')` breaks JSON serialization | Silent data loss in transport |
+| 4 | `ffill()` bleeds description rows into data | Wrong optimization inputs |
+| 5 | Consecutive days RHS wrong for multi-shift | Feasible models appear infeasible |
+| 6 | Console entry point references wrong module | Install works, command fails |
+| 7 | Example columns don't match parser | Every example fails on first try |
+| 7 | Percentages instead of fractions in examples | Examples always return infeasible |
+| 7 | pyproject.toml key ordering breaks pip | Installation fails entirely |
 
-2. Output Quality Verification
-   Run scenarios, PRINT full output. Check qualitative properties.
+Unit tests are not sufficient validators for AI-generated systems. Cross-boundary verification is the strongest argument in this entire methodology.
 
-3. Cross-Phase Integration Test
-   Test the complete pipeline from Phase 1 to N.
+#### 3.4 Approval Gate
 
-4. Error Path Verification
-   Test every known failure mode.
-
-5. Next-Phase Readiness
-   Verify interfaces the next phase requires.
-
-6. Git Cleanup
-   Merge branch, confirm clean state.
-
-7. Update BUILD_LOG.md
-
-8. Structured Report
-   Fill in a specific template with pass/fail for each check.
-```
-
-**Evidence from the SAGE build — bugs caught exclusively by verification prompts:**
-
-| Phase | Bug | How Found | Impact if Missed |
-|---|---|---|---|
-| 2 | Binary variable bounds silently ignored | Scheduling integration test | Nurses assigned to unqualified shifts |
-| 2 | `float('inf')` breaks JSON serialization | Serialization roundtrip test | Silent data loss in MCP transport |
-| 4 | `ffill()` bleeds description rows into data | Messy data integration test | Wrong optimization inputs from Excel |
-| 5 | Consecutive days RHS wrong for multi-shift | Cross-phase scheduling pipeline | Feasible models appear infeasible |
-| 6 | Console entry point references wrong module | Installation flow simulation | `pip install` works, command fails |
-| 7 | Example Excel columns don't match parser | Example smoke test | Every example fails on first try |
-| 7 | Blending problem uses % instead of fractions | Example solve test | Example always returns infeasible |
-| 7 | pyproject.toml key ordering breaks pip | Installation simulation | Installation fails entirely |
-
-Every one of these passed unit tests. Every one was caught by deliberate cross-boundary verification. This is the strongest argument in the entire methodology.
-
-### 4.4 Approval Gate
-
-The human reviews the verification report and:
-- **Approves:** Proceed to next phase
-- **Requests fixes:** Agent addresses issues, re-verifies
-- **Revises plan:** Architect updates spec or remaining phase prompts
-
-This gate prevents compounding errors. A Phase 3 bug that goes unnoticed becomes a Phase 5 redesign and a Phase 7 rewrite.
+The human reviews the verification report and approves, requests fixes, or revises the plan. This gate prevents compounding errors across phases.
 
 ---
 
-## 5. Git Strategy
+### 4. Git Strategy
 
 ```
 main ← merges from develop at milestones only
   └── develop ← integration branch
-        ├── feature/phase-1-[name]    → merge to develop after verification
+        ├── feature/phase-1-[name]    → merge after verification
         ├── feature/phase-2-[name]
         └── ...
 
-Tags: phase-N-complete (rollback points), v0.1.0 (releases)
+Tags: phase-N-complete (rollback points), vX.Y.Z (releases)
 ```
 
-**Why this matters for LLM builds:** If Phase 5 corrupts Phase 3's work, you can roll back to `phase-3-complete` and rebuild. Without this, you untangle changes across a flat history — expensive with AI-generated code where diffs are large.
+Phase tags enable rollback. If Phase 5 corrupts Phase 3's work, you reset to `phase-3-complete` and rebuild from there.
 
 ---
 
-## Part II — Known Limitations and Evolution
+### 5. Pre-Commit Security
+
+Before pushing code to any remote repository, verify that commits do not contain sensitive information:
+
+- API keys or access tokens
+- Authentication credentials (passwords, private keys, secrets)
+- Environment configuration files containing secrets
+- Personally identifiable information (PII)
+- Internal system identifiers or confidential infrastructure details
+
+Automated secret-scanning tools should be used whenever possible. The only exceptions are explicit contact information intentionally included for support or documentation, such as project email addresses and maintainers' public contact information.
+
+This check should be part of the pre-commit hook configuration established in Phase 1 of any project build.
 
 ---
 
-## 6. Where This Methodology Breaks
+## Part II — Known Limitations
 
-This methodology was developed on a single-developer, single-project, seven-phase build. It has specific limitations that become apparent at larger scale.
+---
 
-### 6.1 Spec Drift
+### 6. Where This Methodology Breaks
 
-**Problem:** After 3-4 phases, `SPEC.md` diverges from the codebase. The agent implements against an outdated specification.
+#### 6.1 Spec Drift
 
-**Mitigation (current):** Spec changelog, design decisions log.
+After 3-4 phases, monolithic specs diverge from the codebase. **Mitigation:** Modular specs, machine-readable schemas validated in CI, spec changelog.
 
-**Better solution (future):** Machine-readable specification artifacts that stay synchronized with code:
-- JSON Schema files validated in CI
-- OpenAPI specs generated from code
-- TypeScript interfaces or protobuf definitions as source of truth
-- Modular specs per module, updated as part of the phase that modifies them
+#### 6.2 Waterfall Rigidity
 
-The principle: **parts of the spec should be executable, not just readable.**
+Sequential phases don't accommodate mid-build redesign. **Mitigation:** An iterative loop — spec → build → verify → revise spec → continue. Phase prompts should anticipate revision.
 
-### 6.2 Waterfall Rigidity
+#### 6.3 Architect Bottleneck
 
-**Problem:** The methodology is sequential. Real systems require refactoring, backtracking, and mid-build redesign. LLMs often discover problems during implementation that invalidate earlier phases.
+One human architect writing all specs becomes a bottleneck. **Mitigation:** Module-level spec fragments. Eventually, a Spec Generator agent produces specifications from high-level intent, reviewed by the human architect before builders execute.
 
-**Mitigation (current):** Verification prompts catch integration issues before they compound.
+#### 6.4 LLM-Dependent Verification
 
-**Better solution (future):** An iterative loop:
+Builder and verifier share the same model's blind spots. **Mitigation:** Layered verification:
 
-```
-spec → build → verify → revise spec → continue
-```
+| Layer | Tool |
+|---|---|
+| Static analysis | mypy, ruff, eslint |
+| Schema validation | JSON Schema, OpenAPI validators |
+| Unit tests | pytest, jest |
+| Integration tests | Verification prompts |
+| Deterministic CI | GitHub Actions pipeline |
+| Review agent | Separate model instance or temperature |
 
-Phase prompts should anticipate revision. When verification reveals a spec deficiency, the protocol should be: update the spec, log the decision, adjust downstream phases — not force through the original plan.
+Verification prompts should progressively become CI jobs.
 
-### 6.3 Architect Bottleneck
+#### 6.5 Build Log Bloat
 
-**Problem:** The methodology depends on one human architect writing specs, prompts, and verification criteria. For large systems, this becomes a bottleneck — the architect spends more time writing specs than reviewing code.
-
-**Mitigation (current):** Pre-written phase and verification prompts reduce per-phase architect effort.
-
-**Better solution (future):** Spec fragments per module rather than monolithic specs. Architect defines system-level architecture and interfaces; module-level specs can be generated or co-authored by the coding agent under architectural constraints. Eventually, an orchestrator agent replaces the human architect for routine decisions.
-
-### 6.4 Verification Is Still LLM-Dependent
-
-**Problem:** Even verification prompts are executed by an LLM. Builder mistakes and verifier mistakes can correlate — the same model may have the same blind spots in both roles.
-
-**Mitigation (current):** Verification prompts include deterministic checks (assert statements, JSON roundtrips, file existence checks) alongside qualitative assessment.
-
-**Better solution (future):** A layered verification stack:
-
-| Layer | What It Catches | Tool |
-|---|---|---|
-| Static analysis | Type errors, style violations | mypy, ruff, eslint |
-| Schema validation | Interface contract violations | JSON Schema, OpenAPI validators |
-| Unit tests | Module-level correctness | pytest, jest |
-| Integration tests | Cross-module interaction bugs | Verification prompts |
-| Deterministic CI | Regression, installation, packaging | GitHub Actions, CI pipeline |
-| LLM review agent | Spec compliance, architectural drift | Separate model instance |
-
-Verification prompts should progressively become CI jobs. The SAGE build used manual prompts; a mature workflow automates the mechanical checks and reserves LLM verification for qualitative assessment only.
-
-### 6.5 Build Log Bloat
-
-**Problem:** BUILD_LOG.md grows with every session. Eventually the agent's context window can't hold it, and it stops reading the full log.
-
-**Solution:** Structured log with active summarization:
-
-```
-.build/
-├── BUILD_STATE.md         ← Current status only (< 50 lines)
-├── BUILD_SUMMARY.md       ← Phase summaries (< 200 lines)
-└── archive/
-    ├── phase_1_log.md     ← Full detail, completed phases
-    ├── phase_2_log.md
-    └── ...
-```
-
-The agent reads `BUILD_STATE.md` (tiny, always current) and `BUILD_SUMMARY.md` (compressed history). Full logs exist for human review but aren't loaded into agent context.
+Large logs exceed context windows. **Mitigation:** Split into BUILD_STATE.md (current, tiny), BUILD_SUMMARY.md (compressed), and archived phase logs.
 
 ---
 
@@ -460,11 +349,9 @@ The agent reads `BUILD_STATE.md` (tiny, always current) and `BUILD_SUMMARY.md` (
 
 ---
 
-## 7. Evolution of the .build System
+### 7. Evolution of the .build System
 
-### 7.1 Current State: Static Documents
-
-Today, `.build/` contains markdown files that humans paste into agent prompts:
+#### 7.1 Current: Static Documents
 
 ```
 .build/
@@ -475,106 +362,74 @@ Today, `.build/` contains markdown files that humans paste into agent prompts:
 └── VERIFICATION_PROMPTS.md
 ```
 
-This works for single-developer, single-project builds. It was sufficient for SAGE. But it will not scale.
+Sufficient for single-developer, single-project builds.
 
-### 7.2 Near-Term Evolution: Active Tooling
-
-The next step is executable tools alongside documents:
+#### 7.2 Near-Term: Active Tooling
 
 ```
 .build/
-├── docs/
+├── docs/                           ← Specifications and decisions
 │   ├── AGENT.md
-│   ├── spec/
+│   ├── spec/                       ← Modular specs
 │   │   ├── architecture.md
-│   │   ├── data_models.md
 │   │   └── modules/
-│   └── decisions/                   ← Architectural Decision Records
+│   ├── schemas/                    ← Machine-readable contracts
+│   │   ├── api.yaml
+│   │   └── data_models.json
+│   └── decisions/                  ← Architectural Decision Records
 │       ├── ADR-001-solver-choice.md
-│       ├── ADR-002-file-format.md
-│       └── ADR-003-api-design.md
+│       └── ADR-002-api-design.md
 │
-├── state/
-│   ├── BUILD_STATE.md               ← Current status (< 50 lines)
-│   ├── BUILD_SUMMARY.md             ← Compressed history
-│   └── archive/                     ← Full phase logs
+├── state/                          ← Build state (summarized)
+│   ├── BUILD_STATE.md
+│   ├── BUILD_SUMMARY.md
+│   └── archive/
 │
-├── prompts/
+├── prompts/                        ← Phase and verification prompts
 │   ├── phases/
-│   │   ├── phase_1.md
-│   │   └── ...
 │   ├── verification/
-│   │   ├── verify_phase_1.md
-│   │   └── ...
-│   └── templates/                   ← Reusable prompt templates
-│       ├── phase_prompt_template.md
-│       └── verification_template.md
+│   └── templates/                  ← Reusable prompt templates
 │
-├── schemas/                          ← Machine-readable contracts
-│   ├── solver_input.json
-│   ├── api.yaml
-│   └── config.schema.json
+├── scripts/                        ← Automation
+│   ├── verify_phase.py
+│   ├── summarize_log.py
+│   └── validate_schemas.py
 │
-├── scripts/
-│   ├── verify_phase.py              ← Automated verification runner
-│   ├── summarize_log.py             ← Log compression tool
-│   └── validate_schemas.py          ← Schema compliance checker
+├── eval/                           ← Quality evaluation
+│   ├── benchmark_problems/
+│   └── quality_rubrics.md
 │
-├── eval/
-│   ├── benchmark_problems/           ← Known-answer test cases
-│   └── quality_rubrics.md            ← Evaluation criteria
-│
-└── telemetry/
-    ├── token_usage.csv               ← Cost tracking per phase
-    └── failure_modes.md              ← Patterns of agent mistakes
+└── telemetry/                      ← Agent performance tracking
+    ├── token_usage.csv
+    └── failure_modes.md
 ```
 
-**Architectural Decision Records (ADRs)** deserve special mention. Large projects benefit from recording design decisions in a structured format. When a new agent session encounters code and wonders "why was it built this way?", ADRs provide the historical reasoning that the code itself cannot express. Both human developers and AI agents benefit from this context.
+**Architectural Decision Records (ADRs)** provide historical reasoning that code cannot express. When a new agent session encounters code and wonders "why was it built this way?", ADRs answer.
 
-**Agent telemetry** tracks how agents perform across phases: token usage, failure modes, retry patterns, verification failure types. This data optimizes prompts, workflows, and agent configurations over time. It transforms .build from a control system into a learning system.
+**Agent telemetry** tracks token usage, failure modes, and retry patterns. This transforms .build from a control system into a learning system.
 
-### 7.3 Medium-Term Evolution: Externalized State
+#### 7.3 Medium-Term: Externalized State
 
-As projects scale, markdown files in a repository become insufficient. The `.build` layer evolves to externalize its state:
-
-**Externalized Project Memory:**
-BUILD_LOG.md transitions from a flat file into a structured interface to a persistent storage system (NoSQL database, knowledge graph, or specialized build state service). The repository contains only pointers and connection configurations:
+As projects scale, the .build directory becomes a lightweight interface to a cloud-hosted build state:
 
 ```
 .build/
-├── config.yaml                      ← Connection to external build state
-│   # build_state_uri: https://buildstate.example.com/project/sage
-│   # auth: vault://build-state-token
-│
-├── .cache/
-│   └── latest_state.md              ← Cached summary for offline work
-│
-└── schemas/                          ← Still local (source of truth)
+├── config.yaml            ← Connection to remote build state
+├── project_id             ← Workspace identifier  
+├── .cache/                ← Cached summaries for offline work
+├── schemas/               ← Still local (source of truth)
+└── spec/                  ← Still local (source of truth)
 ```
 
-All persistent workflow data — build logs, phase history, verification results, specification versions, agent execution traces — resides in the centralized store. The repository remains focused on source code, tests, documentation, and configuration.
+All persistent workflow data — build logs, phase history, verification results, specification versions, agent execution traces — resides in a centralized cloud database. The repository remains focused on source code.
 
-**Versioned Specification Registry:**
-SPEC.md evolves into a versioned specification stored externally, with the repository containing only the current working interface. This enables:
-- Automated diffing between architecture revisions
-- Traceability between code commits and spec changes
-- Rollback to previous architectural states
-- Spec version pinning per branch
+This architecture prevents repository bloat, enables real-time collaboration between developers and agents, supports scalable querying of build history, and allows centralized governance for large organizations.
 
-**Why cloud-hosted build state matters:**
-- Prevents repository bloat
-- Enables real-time collaboration between developers and agents
-- Supports scalable querying of build history and agent activity
-- Allows centralized governance for large organizations
-- Enables integration with CI/CD and project management tools
+#### 7.4 Integration with Agile Planning Systems
 
-Under this design, the local `.build` directory becomes a gateway to a distributed build orchestration system.
+The .build system exposes integration layers to common planning tools:
 
-### 7.4 Integration with Agile Planning Systems
-
-To support team-scale development, the `.build` system exposes integration layers to common planning tools:
-
-| Planning Tool | Integration |
+| System | Integration |
 |---|---|
 | Jira / Linear / ClickUp | Phase prompts ↔ sprint tickets (bi-directional) |
 | Notion | Spec sections ↔ documentation pages |
@@ -582,204 +437,378 @@ To support team-scale development, the `.build` system exposes integration layer
 | Slack / Teams | Phase completion → notifications |
 | CI/CD | Verification prompts → automated pipeline stages |
 
-Phase prompts and verification checkpoints automatically map to tickets, sprint tasks, or milestones. Changes in planning tools update development specifications. Agent execution results update project dashboards in real time.
+This connects agent-driven development with traditional agile planning, ensuring AI-assisted work remains visible within standard organizational processes.
 
-This connects agent-driven development with traditional agile planning, ensuring AI-assisted development remains visible and manageable within standard organizational processes.
+---
 
-### 7.5 Long-Term Vision: Agentic Development Infrastructure
+### 8. Agent Development Runtime (ADR)
 
-The logical endpoint is a multi-agent orchestration system where the human provides intent and agents coordinate the full development lifecycle:
+As the .build system matures, the next logical evolution is transforming it from a static directory into a **runtime environment** that manages and orchestrates software-building agents — an **Agent Development Runtime**.
+
+The ADR acts as the operating system for AI-assisted development workflows. Instead of manually prompting agents and coordinating through documents, the runtime manages agents, tracks system state, executes workflows, and enforces architectural constraints.
+
+#### 8.1 Why a Runtime Is Necessary
+
+| Problem | Impact |
+|---|---|
+| Stateless sessions | Agents forget progress between runs |
+| Manual orchestration | Humans coordinate agent tasks by pasting prompts |
+| Fragmented state | Build history scattered across sessions |
+| Inconsistent verification | Quality checks vary across sessions |
+| Poor multi-agent coordination | Parallel work becomes chaotic |
+
+The .build methodology addresses these with structured documents. A runtime system allows these protocols to be **executed automatically** rather than enforced manually.
+
+#### 8.2 Core Capabilities
+
+**Agent Orchestration:**
+
+| Agent Type | Responsibility |
+|---|---|
+| Spec Generator Agent | Produces specifications from high-level intent |
+| Architect Agent | Updates system specifications and resolves conflicts |
+| Builder Agent | Implements modules according to spec |
+| Review Agent | Detects architectural drift and spec violations |
+| Verification Agent | Runs integration tests and validations |
+| Refactor Agent | Improves code quality and structure |
+| Documentation Agent | Maintains developer documentation |
+
+Each agent operates within constraints derived from the project's specification and directive files.
+
+**Persistent Development State:**
+
+A centralized project state store (cloud-hosted NoSQL database or knowledge graph) containing build logs, phase progress, specification versions, architectural decisions, verification results, agent execution traces, and cost metrics. The local .build directory becomes a thin interface to this state.
+
+**Workflow Execution Engine:**
+
+Instead of manually pasting prompts, the runtime executes development workflows as structured pipelines:
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  ORCHESTRATOR AGENT                                  │
-│  Reads spec, generates phases, dispatches builders,  │
-│  runs verification, approves/rejects, manages git    │
-└──────────┬──────────────────┬───────────────────────┘
-           │                  │
-    ┌──────▼──────┐    ┌──────▼──────┐
-    │ BUILDER     │    │ BUILDER     │
-    │ AGENT A     │    │ AGENT B     │
-    │ (solver)    │    │ (file I/O)  │    ← parallel where
-    └──────┬──────┘    └──────┬──────┘      dependencies allow
-           │                  │
-    ┌──────▼──────┐    ┌──────▼──────┐
-    │ REVIEW      │    │ REVIEW      │
-    │ AGENT A     │    │ AGENT B     │    ← adversarial check
-    └──────┬──────┘    └──────┬──────┘
-           │                  │
-    ┌──────▼──────────────────▼──────┐
-    │  INTEGRATION VERIFIER           │
-    │  Tests cross-module coherence   │
-    └────────────────┬────────────────┘
-                     │
-              ┌──────▼──────┐
-              │   HUMAN     │
-              │   AUDITOR   │    ← reviews outcomes, not process
-              └─────────────┘
+SPEC CREATED
+     ↓
+PHASE GENERATED (by Spec Generator Agent)
+     ↓
+BUILDER AGENTS EXECUTE
+     ↓
+VERIFICATION PIPELINE
+     ↓
+REVIEW AGENTS
+     ↓
+HUMAN APPROVAL (or Orchestrator approval for routine phases)
+     ↓
+NEXT PHASE
 ```
 
-In this model:
-- The **Orchestrator** replaces the human architect for routine decisions
-- **Builder Agents** execute phases in parallel where dependency graphs allow
-- **Review Agents** provide adversarial checks using a different model or temperature, reducing correlated failures
-- **Integration Verifiers** run deterministic CI plus LLM-based coherence checks
-- The **Human** shifts from directing every step to auditing outcomes
-- The **Three Control Documents remain the coordination protocol** — they are the invariant across all levels of automation
+**Build State Snapshots:**
 
-**Multi-agent orchestration file:**
+Git-like commits for the entire development workflow, not just code. A snapshot captures specification version, build progress, architectural decisions, agent configurations, and verification results. This enables reproducible builds, workflow rollback, experimentation with different agent strategies, and comparison of development approaches.
 
-```markdown
-# ORCHESTRATION.md
+#### 8.3 Security Model for Agentic Development
 
-## Agent Roles
-- Builder A: core library (Phases 1-5)
-- Builder B: server layer (Phase 6, after Phase 5 gate)
-- Verifier: runs after each phase completion
+Once agents run builds autonomously, new security concerns emerge:
 
-## Dependency Graph
-Phase 3 depends on: Phase 1, Phase 2
-Phase 4 depends on: Phase 1 (not Phase 2 or 3)
-Phase 5 depends on: Phase 2, Phase 3, Phase 4
-Phase 6 depends on: Phase 5
+| Threat | Description |
+|---|---|
+| Prompt injection | Malicious input altering agent behavior |
+| Malicious code generation | Agent producing harmful code |
+| Spec tampering | Unauthorized modification of specifications |
+| Credential leaks | Secrets exposed in generated code or logs |
+| Supply chain attacks | Compromised dependencies introduced by agents |
 
-## Parallel Opportunities
-Phase 3 (builder) and Phase 4 (fileio) can run in parallel
-after Phase 2 — they share Phase 1 schemas but don't
-depend on each other.
+The ADR must implement:
+
+- **Agent identity and authentication:** Each agent has verified credentials
+- **Permission scopes:** Builders can modify code but not specs; architects can modify specs but not deploy
+- **Prompt sanitization:** Input validation before agent execution
+- **Build provenance:** Cryptographic chain of custody for code changes
+- **Secret scanning:** Automated detection of credentials in generated code
+- **Audit logging:** Complete record of agent actions for security review
+
+**Permission model:**
+
+| Role | Permissions |
+|---|---|
+| Architect | Modify specifications, approve phases |
+| Builder | Implement code, update build state |
+| Verifier | Execute tests, submit verification reports |
+| Reviewer | Evaluate architectural compliance |
+| Observer | Read-only access to project state |
+
+#### 8.4 System Architecture
+
+```
+┌──────────────────────────────────────────┐
+│          HUMAN INTERFACE                  │
+│   CLI / IDE Plugin / Web Dashboard       │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│       AGENT DEVELOPMENT RUNTIME           │
+│                                           │
+│  • Agent Orchestrator                     │
+│  • Workflow Engine                        │
+│  • Spec Manager & Version Control         │
+│  • Verification Pipeline                  │
+│  • Security & Access Control              │
+│  • Telemetry & Cost Metrics               │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│        PROJECT STATE DATABASE             │
+│        (NoSQL / Knowledge Graph)          │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│           AGENT WORKERS                   │
+│                                           │
+│  Spec Generator │ Builder │ Reviewer      │
+│  Verifier │ Refactor │ Documentation      │
+└──────────────────────────────────────────┘
 ```
 
-### 7.6 Build State Snapshots
+The ADR represents the next layer in the software tooling stack:
 
-A powerful concept for collaborative agentic development: Git-like commits for the entire development workflow state, not just code.
+```
+Traditional:         Future:
 
-A **Build State Snapshot** captures:
-- Current specification version
-- Build log state
-- Phase completion status
-- All architectural decisions made
-- Verification results
-- Agent configuration and prompt versions
+IDE                  IDE
+Version Control      Agent Development Runtime
+CI/CD                Version Control
+Cloud                CI/CD
+                     Cloud
+```
 
-This enables:
-- Branching development workflows (not just code)
-- Reverting to a previous workflow state when an approach fails
-- Comparing how different agent configurations perform on the same project
-- Reproducible builds where the entire context — not just the code — is versioned
+Just as container orchestration transformed infrastructure management, the ADR could become the standard way teams coordinate AI-driven software development.
 
-### 7.7 Cross-Repository Knowledge
+---
+
+### 9. Cross-Repository Knowledge
 
 Organizations working on multiple projects benefit from a shared architectural knowledge base:
 
 ```
 org-build-knowledge/
-├── patterns/
+├── patterns/                      ← Reusable architectural patterns
 │   ├── mcp-server-pattern.md
-│   ├── api-service-pattern.md
-│   └── data-pipeline-pattern.md
-├── lessons/
-│   ├── highs-solver-quirks.md
-│   └── mcp-sdk-gotchas.md
-├── templates/
+│   └── api-service-pattern.md
+├── lessons/                       ← Hard-won implementation lessons
+│   ├── solver-integration.md
+│   └── sdk-gotchas.md
+├── templates/                     ← Project scaffolds
 │   ├── python-monorepo/
 │   └── typescript-api/
 └── metrics/
     └── agent-performance-baselines.csv
 ```
 
-Agents working across projects access common architectural knowledge, reducing duplication and enabling consistent engineering practices. This transforms `.build` from a per-project tool into an organizational memory system for software development.
+Agents working across projects access common knowledge, reducing duplication and enabling consistent engineering practices. This transforms .build from a per-project tool into an organizational memory system.
 
 ---
 
-## Part IV — The Paradigm Shift
+## Part IV — The Meta-Prompt Ecosystem
 
 ---
 
-## 8. Three Emerging Paradigms
+### 10. Beyond Software Engineering
 
-The industry is exploring three distinct approaches to AI-assisted development. They haven't converged yet.
+The meta-prompt concept — a structured protocol that initializes an environment before task execution — is not limited to software construction. Software engineering is one domain; many others benefit from the same pattern.
 
-### 8.1 Spec-Driven Development (This Methodology)
+A mature development lifecycle involves multiple domains of expertise, each governed by its own meta-prompt. These meta-prompts operate as complementary layers:
+
+```
+┌─────────────────────────────────────────────┐
+│  LLM-Native Software Engineering             │
+│  (Architecture and application development)  │
+│                                              │
+│  Triggers companion meta-prompts as needed:  │
+└──────┬──────┬──────┬──────┬─────────────────┘
+       │      │      │      │
+       ▼      ▼      ▼      ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│Deployment│ │  DevOps  │ │ Database │ │  UI/UX   │
+│Engineering│ │          │ │          │ │          │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘
+```
+
+Each meta-prompt is maintained as an independent, evolving repository. They are invoked by the LLM-Native Software Engineering meta-prompt when their domain becomes relevant during a project's lifecycle.
+
+#### 10.1 Deployment Engineering Meta-Prompt
+
+**Repository:** https://github.com/pragnakar/Deployment_Engineering
+
+**Responsibility:** Defines the runtime and infrastructure environment in which development and deployment take place.
+
+**Scope:**
+- Docker-based development environments and container image standards
+- Kubernetes deployment configuration
+- CI/CD pipeline definitions
+- Infrastructure provisioning (Terraform, Pulumi)
+- Environment configuration and secrets management
+- Observability and monitoring setup
+
+**When invoked:** Before or alongside full-scale development, when the project requires a containerized and infrastructure-aware development environment.
+
+**Relationship to this meta-prompt:**
+
+```
+Deployment Engineering Meta-Prompt
+(environment and infrastructure initialization)
+        ↓
+LLM-Native Software Engineering Meta-Prompt
+(architecture and build protocol)
+        ↓
+Continuous Development and Deployment
+```
+
+#### 10.2 DevOps Meta-Prompt
+
+**Repository:** https://github.com/pragnakar/DevOps
+
+**Responsibility:** Ensures deployed systems remain reliable, observable, and maintainable during runtime operations.
+
+**Scope:**
+- Monitoring system health and performance
+- Log collection, analysis, and alerting
+- Anomaly detection and incident response
+- Operational access points for debugging
+- System reliability and resilience practices
+- Recovery procedures
+
+**When invoked:** When systems approach deployment or production readiness.
+
+#### 10.3 Database Meta-Prompt
+
+**Repository:** https://github.com/pragnakar/Database
+
+**Responsibility:** Guides the selection, configuration, security, and operation of database systems within modern software architectures.
+
+**Scope:**
+- Selecting appropriate database technology for the workload
+- Schema design and indexing strategies
+- Secure configuration and access controls
+- Backup and recovery strategies
+- Database health monitoring and performance tuning
+
+**When invoked:** When database architecture and configuration decisions are required during system design.
+
+#### 10.4 UI/UX Meta-Prompt
+
+**Repository:** https://github.com/pragnakar/UI-UX
+
+**Responsibility:** Guides the design of user interfaces and experiences so that applications remain intuitive, accessible, and aligned with user workflows.
+
+**Scope:**
+- User-centered interface design
+- Information architecture and navigation
+- Interaction design and user workflows
+- Visual consistency and design systems
+- Responsive design across devices
+- Accessibility and usability best practices
+
+**When invoked:** Whenever user interface and experience design decisions are required.
+
+#### 10.5 The Layered Meta-Prompt Model
+
+Together, these meta-prompts establish a complete lifecycle:
+
+| Meta-Prompt | Responsibility |
+|---|---|
+| LLM-Native Software Engineering | Architecture and application development |
+| Deployment Engineering | Infrastructure provisioning and deployment |
+| DevOps | Runtime operations, monitoring, and reliability |
+| Database | Data persistence, schema design, and management |
+| UI/UX | User interface and experience design |
+
+Each layer evolves independently while integrating through the parent meta-prompt. This separation allows domain expertise to deepen without creating monolithic methodology documents that exceed agent context limits.
+
+**Future meta-prompts** may emerge for additional domains: security engineering, machine learning operations (MLOps), API design, testing strategy, documentation, and others. The pattern is extensible — each new domain adds a new meta-prompt repository that the engineering meta-prompt can invoke.
+
+---
+
+## Part V — The Paradigm Shift
+
+---
+
+### 11. Three Emerging Paradigms
+
+The industry is exploring three distinct approaches. They haven't converged.
+
+#### 11.1 Spec-Driven (This Methodology)
 
 ```
 Human writes spec → Agent implements → Human verifies → Iterate
 ```
 
-**Strengths:** High coherence, predictable outcomes, clear accountability.
-**Weaknesses:** Architect bottleneck, spec maintenance overhead, waterfall tendency.
-**Best for:** Greenfield projects, well-understood domains, production-grade output.
+**Best for:** Greenfield projects, production-grade output, well-understood domains.
 
-### 8.2 Repo-Evolution (Cursor / Windsurf Style)
+#### 11.2 Repo-Evolution (Cursor / Windsurf Style)
 
 ```
-Human has existing codebase → Agent modifies in-place → Human reviews diffs
+Human has codebase → Agent modifies in-place → Human reviews diffs
 ```
 
-**Strengths:** Low overhead, works with existing code, rapid iteration.
-**Weaknesses:** Architectural drift over time, inconsistent quality, no global coherence guarantee.
 **Best for:** Brownfield projects, small changes, rapid prototyping.
 
-### 8.3 Autonomous Agent Swarms
+#### 11.3 Autonomous Agent Swarms
 
 ```
-Human provides high-level goal → Agent swarm designs + builds + tests → Human audits
+Human provides goal → Agent swarm designs + builds + tests → Human audits
 ```
 
-**Strengths:** Maximum autonomy, potential for parallel execution, minimal human involvement.
-**Weaknesses:** Unpredictable, difficult to debug, prone to compounding errors without strong coordination protocols.
-**Best for:** Experimental, research, well-bounded tasks with clear evaluation criteria.
+**Best for:** Experimental work, well-bounded tasks with clear evaluation criteria.
 
-**The key insight:** All three paradigms benefit from the Three Control Documents. Whether a human writes the spec or an orchestrator agent generates it, whether phases are manual or automated, whether verification is prompted or CI-driven — the specification, directive, and build log remain the communication substrate that enables coordination.
+All three paradigms benefit from the Three Control Documents. Whether phases are manual or automated, whether a human writes the spec or an orchestrator generates it — the specification, directive, and build log remain the coordination substrate.
 
 ---
 
-## 9. The Deeper Shift
+### 12. The Deeper Shift
 
-This document quietly demonstrates something larger than a development methodology:
+We are witnessing the emergence of a new layer in software engineering:
 
-**Software development with LLMs is becoming a protocol problem, not a coding problem.**
+```
+Traditional development:
+  Human thinks → Human writes code → Human tests → Human ships
 
-The Three Control Documents function as a communication protocol between agents — human or artificial. This is analogous to:
-- APIs between services
-- Network protocols between machines
-- Distributed systems coordination patterns
+Current LLM-assisted development:
+  Human thinks → Human writes spec → Agent writes code →
+  Agent tests → Human verifies → Human ships
 
-We are moving from:
-```
-Human coding + AI assistance
-```
-To:
-```
-AI execution + human architecture
-```
-And eventually toward:
-```
-Multi-agent coordination governed by shared protocols
+Near-future agentic development:
+  Human describes intent → Spec Generator Agent writes spec →
+  Builder Agents implement → Verifier Agents test →
+  Orchestrator approves → Human audits outcomes
+
+Far-future autonomous development:
+  Human describes intent → Agent swarm designs, builds,
+  tests, verifies, deploys, monitors → Human audits outcomes
 ```
 
-The documents are the invariant. The workflow evolves from manual to semi-automated to fully agentic. But the need to specify before building, to verify before proceeding, and to remember across sessions remains as long as complex software needs to be built correctly.
+At every stage, the Three Control Documents serve the same function: they are the shared protocol enabling coordination between agents. The documents are the invariant. The workflow evolves from manual to semi-automated to fully agentic.
+
+The role of the human shifts from direct implementation to **architectural governance** — defining intent, reviewing outcomes, and ensuring alignment with purpose.
 
 The specification is the contract. The directive is the culture. The build log is the memory.
 
 ---
 
-## 10. Anti-Patterns
+## Appendix A — Anti-Patterns
 
-| Anti-Pattern | What Goes Wrong | Prevention |
+| Anti-Pattern | Consequence | Prevention |
 |---|---|---|
 | "Just build it" | Local correctness, global incoherence | Write spec before building |
-| Skipping verification | Silent integration bugs accumulate | Mandatory verification between phases |
-| Modifying spec without logging | Later phases reference outdated design | Spec changelog + Design Decisions Log |
-| One giant phase | Focus loss, large uncommitted changes, difficult rollback | 4-8 hour phases maximum |
-| Agent self-approval | No external check on architectural drift | Human gate between phases |
-| Verbose directive (500+ lines) | Agent loses important instructions in noise | Keep under 150 lines |
-| Forgetting BUILD_LOG updates | Session recovery fails | Update instruction in every phase prompt |
-| Trusting unit tests alone | Cross-boundary bugs survive to production | Verification tests across phases |
-| Same model for build + verify | Correlated failures (same blind spots) | Deterministic checks, different model for review, CI |
+| Skipping verification | Silent integration bugs | Mandatory verification between phases |
+| Modifying spec without logging | Later phases reference outdated design | Spec changelog + Decision Records |
+| One giant phase | Focus loss, difficult rollback | 4-8 hour phases maximum |
+| Agent self-approval | No check on architectural drift | Human gate between phases |
+| Verbose directive (500+ lines) | Agent loses key instructions | Keep under 150 lines |
+| Forgetting BUILD_LOG updates | Session recovery fails | Update instruction in every prompt |
+| Same model for build + verify | Correlated blind spots | Deterministic checks, CI, review agent |
+| Trusting unit tests alone | Cross-boundary bugs survive | Verification tests across phases |
+| Committing secrets | Security breach | Pre-commit secret scanning |
 
 ---
 
-## 11. Quick-Start Checklist
+## Appendix B — Quick-Start Checklist
 
 ```
 [ ] Write AGENT.md — directive file, < 150 lines
@@ -789,24 +818,25 @@ The specification is the contract. The directive is the culture. The build log i
 [ ] Write all verification prompts — one per phase boundary
 [ ] Write ship-readiness verification prompt
 [ ] Initialize git with main + develop branches
+[ ] Configure pre-commit hooks (linting, secret scanning)
 [ ] Create .build/ directory with all control documents
 [ ] Symlink AGENT.md to project root
+[ ] Identify companion meta-prompts needed (Deployment, Database, etc.)
 [ ] Begin Phase 1
 ```
 
 ---
 
-## 12. Measuring Success
+## Appendix C — Measuring Success
 
-| Metric | SAGE v0.1.0 | Target |
-|---|---|---|
-| Bugs caught by verification (pre-ship) | 8 | > 80% of total bugs |
-| Tests at ship | 459 | Proportional to codebase |
-| Test failures at ship | 0 | 0 (non-negotiable) |
-| Phases requiring rework after verification | 0 | < 20% |
-| Session recovery success rate | 100% | 100% |
-| Spec questions from agent during build | 0 | 0 (spec was sufficient) |
-| Architectural decisions made by agent | 0 | 0 (directive was sufficient) |
+| Metric | Target |
+|---|---|
+| Bugs caught by verification (pre-ship) | > 80% of total bugs |
+| Test failures at ship | 0 (non-negotiable) |
+| Phases requiring rework after verification | < 20% |
+| Session recovery success rate | 100% |
+| Spec questions from agent during build | 0 (spec was sufficient) |
+| Architectural decisions made by agent | 0 (directive was sufficient) |
 
 **Qualitative indicators:**
 - Agent never asks clarifying questions → Spec is complete
@@ -817,4 +847,6 @@ The specification is the contract. The directive is the culture. The build log i
 
 ---
 
-*This methodology was developed through the construction of SAGE v0.1.0 (https://github.com/pragnakar/Project_Sage) — 5,861 lines, 459 tests, 7 phases, 33 commits, 8 bugs caught by verification, zero failures at ship. It is itself an artifact of the paradigm it describes: AI execution governed by human architecture, coordinated through shared protocol documents.*
+*This methodology was developed through practical application, refined through external critique, and published as an open-source meta-prompt. It is itself an artifact of the paradigm it describes: AI execution governed by human architecture, coordinated through shared protocol documents.*
+
+*GitHub: https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING*
