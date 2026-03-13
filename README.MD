@@ -36,6 +36,12 @@ This meta-prompt orchestrates companion protocols invoked as needed during the d
 | DevOps | https://github.com/pragnakar/DevOps | Runtime operations, observability, and reliability |
 | Database | https://github.com/pragnakar/Database | Data persistence, schema design, and management |
 | UI/UX | https://github.com/pragnakar/UI-UX | Interface and experience design |
+| Security Engineering | https://github.com/pragnakar/Security_Engineering | Threat modeling, secure coding, and vulnerability management |
+| MLOps | https://github.com/pragnakar/MLOps | Model lifecycle, training pipelines, and production ML |
+| API Design | https://github.com/pragnakar/API_Design | Interface contracts, versioning, and developer experience |
+| Testing Strategy | https://github.com/pragnakar/Testing-Strategy | Test architecture, coverage strategy, and quality verification |
+| Documentation | https://github.com/pragnakar/Documentation | Technical writing, knowledge management, and developer docs |
+| Scrum | https://github.com/pragnakar/Scrum | Agile sprint cycles, backlog management, ceremonies, and team coordination |
 
 ## Usage
 
@@ -49,7 +55,7 @@ For quick setup, use the Quick-Start Checklist in Appendix B of the meta-prompt 
 
 ## License
 
-Open and collaborative. License information will be defined as the project evolves.
+MIT
 
 ## Author
 

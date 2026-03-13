@@ -6,7 +6,7 @@
 **Author:** Pragnakar Pedapenki
 **Repository:** https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING
 **Applicability:** Claude Code, Cursor, Windsurf, GitHub Copilot, Aider, and any LLM-based coding system
-**Companion Meta-Prompts:** Deployment Engineering, DevOps, Database, UI-UX, Security Engineering, MLOps, API Design, Testing Strategy, Documentation
+**Companion Meta-Prompts:** Deployment Engineering, DevOps, Database, UI-UX, Security Engineering, MLOps, API Design, Testing Strategy, Documentation, Scrum
 
 ---
 
@@ -816,6 +816,7 @@ Each meta-prompt is maintained as an independent, evolving repository. They are 
 | **API Design** | [GitHub](https://github.com/pragnakar/API_Design) | Resource modeling, versioning, error handling, pagination, rate limiting, OpenAPI specifications | When APIs are being designed or documented |
 | **Testing Strategy** | [GitHub](https://github.com/pragnakar/Testing-Strategy) | Test architecture, coverage strategy, performance testing, contract testing, AI-specific verification | When test planning and coverage standards need to be established |
 | **Documentation** | [GitHub](https://github.com/pragnakar/Documentation) | Technical writing, ADRs, API docs, architecture docs, runbooks, documentation-as-code | When documentation architecture needs to be defined |
+| **Scrum** | [GitHub](https://github.com/pragnakar/Scrum) | Sprint cycle management, backlog refinement, ceremonies, velocity tracking, Definition of Done | When iterative delivery and sprint planning structure is needed |
 
 #### 11.2 Invocation Sequence
 
@@ -832,6 +833,7 @@ Project Start
      ├── 6. UI/UX                      ← User interface design
      ├── 7. Testing Strategy           ← Test architecture and coverage
      ├── 8. Documentation              ← Docs architecture and ADRs
+     ├── 9. Scrum                      ← Sprint cycles and iterative delivery
      │
      ├── During development:
      │   └── MLOps                     ← If ML models are involved
@@ -1007,7 +1009,7 @@ The specification is the contract. The directive is the culture. The build log i
 
 ## Version History
 
-- v4.0 — Current — Added Naming Conventions section (phases, stages, versions as independent timelines), expanded Meta-Prompt Ecosystem to 10 modules (Security Engineering, MLOps, API Design, Testing Strategy, Documentation), updated companion references throughout
+- v4.0 — Current — Added Naming Conventions section (phases, stages, versions as independent timelines), expanded Meta-Prompt Ecosystem to 11 modules (Security Engineering, MLOps, API Design, Testing Strategy, Documentation, Scrum), updated companion references throughout
 - v3.0 — Added Agent Development Runtime (ADR), security model for agentic development, cross-repository knowledge system, full meta-prompt ecosystem section with companion repositories
 - v2.0 — Added Phase Protocol (prompt → build → verify → approve), verification evidence table from SAGE build, git strategy with phase tags, pre-commit security section
 - v1.0 — Initial publication: Three Control Documents (Directive, Specification, Build Log), .build directory structure, known limitations
