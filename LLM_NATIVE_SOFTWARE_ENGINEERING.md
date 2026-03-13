@@ -2,11 +2,11 @@
 
 ## A Protocol for Coordinating Human and Artificial Intelligence in Software Development
 
-**Version:** 3.0
+**Version:** 4.0
 **Author:** Pragnakar Pedapenki
 **Repository:** https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING
 **Applicability:** Claude Code, Cursor, Windsurf, GitHub Copilot, Aider, and any LLM-based coding system
-**Companion Meta-Prompts:** Deployment Engineering, DevOps, Database, UI-UX
+**Companion Meta-Prompts:** Deployment Engineering, DevOps, Database, UI-UX, Security Engineering, MLOps, API Design, Testing Strategy, Documentation
 
 ---
 
@@ -291,7 +291,175 @@ Phase tags enable rollback. If Phase 5 corrupts Phase 3's work, you reset to `ph
 
 ---
 
-### 5. Pre-Commit Security
+### 5. Naming Conventions — Phases, Stages, Versions
+
+A project has three independent timelines that evolve at different rates. Conflating them produces confusion in build logs, git history, and team communication. Each timeline has its own naming scheme, its own cadence, and its own success criteria.
+
+```
+SPECIFICATIONS          BUILDS                  RELEASES
+(vision & design)       (construction)          (shipped artifacts)
+
+evolve in PHASES        progress through        tracked by VERSIONS
+                        STAGES
+
+Phase 1: Data Models    Stage: implement        v0.1.0-alpha
+Phase 2: Core Engine    Stage: test             v0.1.0-beta
+Phase 3: API Layer      Stage: verify           v0.1.0
+Phase 4: Integration    Stage: approve          v0.2.0
+                        Stage: failed → rework  v1.0.0
+```
+
+#### 5.1 Specifications Evolve in Phases
+
+A **phase** is a unit of architectural progress. It represents a design decision that has been specified, scoped, and approved for implementation. Phases are sequential and cumulative — Phase 3 builds on the foundation established by Phases 1 and 2.
+
+**Naming:** `phase-N-[descriptive-name]`
+
+**Examples:**
+- `phase-1-data-models` — schema and type definitions
+- `phase-2-solver-engine` — core computation module
+- `phase-3-api-layer` — REST endpoints and serialization
+- `phase-4-integration` — cross-module wiring and pipeline
+
+**Key property:** A phase is a *design* concept. It describes what the specification calls for, not whether the code compiles. A phase can be fully specified before any code is written. Phase numbering never resets — it is the permanent record of the project's architectural evolution.
+
+**Spec versioning within phases:** As specifications evolve, they carry their own version:
+
+```
+SPEC.md v1.0 — Initial specification (Phases 1-4 defined)
+SPEC.md v1.1 — Phase 3 revised: added pagination to API
+SPEC.md v1.2 — Phase 5 added: caching layer
+SPEC.md v2.0 — Major redesign: event-driven architecture
+```
+
+#### 5.2 Builds Progress Through Stages
+
+A **stage** is a unit of construction work within a phase. It represents an attempt to implement, test, or verify the phase's specification. Stages are where work happens — and where work fails. Not every stage succeeds. Failed stages are recorded, diagnosed, and retried.
+
+**Naming:** `stage:[action]` within a phase context
+
+**The standard stage sequence for each phase:**
+
+```
+phase-N
+  ├── stage: implement     ← Agent writes code and unit tests
+  ├── stage: test          ← Unit tests executed, linting passed
+  ├── stage: verify        ← Cross-phase integration verification
+  ├── stage: approve       ← Human reviews and approves
+  └── stage: merge         ← Branch merged, phase tag applied
+```
+
+**Failed stages are first-class events:**
+
+```
+phase-3-api-layer
+  ├── stage: implement     ✓ completed
+  ├── stage: test          ✓ passed (23/23 unit tests)
+  ├── stage: verify        ✗ FAILED — JSON serialization breaks on inf values
+  ├── stage: rework        ✓ completed (fixed float handling)
+  ├── stage: verify        ✓ passed (re-verified phases 1-3)
+  ├── stage: approve       ✓ human approved
+  └── stage: merge         ✓ merged to develop
+```
+
+**Key property:** Stages are *execution* concepts. They describe what happened during construction — including failures. A phase might pass through its stages in one clean run, or it might cycle through implement → test → fail → rework → test → verify multiple times. The build log records every stage transition, including failures, because failure history is diagnostic data.
+
+**Build log entries reference both phase and stage:**
+
+```markdown
+## Phase 3 — API Layer
+### Stage: implement (2026-03-13 09:00)
+- Created api/routes.py, api/serializers.py
+- 23 unit tests written
+
+### Stage: test (2026-03-13 10:15)
+- All 23 tests passing
+- ruff: no violations
+
+### Stage: verify (2026-03-13 10:45)
+- FAILED: float('inf') in solver output breaks json.dumps()
+- Root cause: Phase 2 solver returns inf for unbounded variables
+
+### Stage: rework (2026-03-13 11:00)
+- Added inf/nan sanitizer in serialization layer
+- 2 new tests for edge cases
+
+### Stage: verify (2026-03-13 11:30)
+- PASSED: Full pipeline Phase 1→3 verified
+- JSON roundtrip: all types serialize and deserialize correctly
+
+### Stage: approve (2026-03-13 12:00)
+- Human reviewed verification report
+- Approved for merge
+
+### Stage: merge (2026-03-13 12:05)
+- Merged feature/phase-3-api-layer → develop
+- Tag: phase-3-complete
+```
+
+#### 5.3 Releases Are Tracked by Versions
+
+A **version** is a shipped artifact — a point-in-time snapshot of the codebase that is tagged, packaged, and made available to users. Versions follow [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
+
+**Naming:** `vMAJOR.MINOR.PATCH[-prerelease]`
+
+**Examples:**
+- `v0.1.0-alpha` — first functional prototype, internal testing only
+- `v0.1.0-beta` — feature-complete for initial scope, external testing
+- `v0.1.0` — first stable release
+- `v0.2.0` — new features added (minor)
+- `v1.0.0` — production-ready, API contract stable (major)
+
+**Version boundaries:**
+
+| Version Component | Changes When | Example |
+|---|---|---|
+| MAJOR (1.x.x) | Breaking changes to public API or behavior | v1.0.0 → v2.0.0 |
+| MINOR (x.1.x) | New features, backward compatible | v1.0.0 → v1.1.0 |
+| PATCH (x.x.1) | Bug fixes, no new features | v1.0.0 → v1.0.1 |
+| Pre-release | Testing stages before stable | v0.1.0-alpha, v0.1.0-beta |
+
+**Key property:** Versions are *delivery* concepts. They describe what users receive. A version may span multiple phases (v0.1.0 might ship after Phase 4 completes) or a single phase might produce multiple versions (Phase 5 hotfixes produce v0.1.1 and v0.1.2). Versions and phases are deliberately decoupled.
+
+#### 5.4 The Three Timelines Are Independent
+
+This independence is the critical design decision. Each vertical evolves on its own schedule:
+
+```
+Spec Timeline:    Phase 1 ──── Phase 2 ──── Phase 3 ──── Phase 4 ────
+                       │            │            │            │
+Build Timeline:   [impl→test→  [impl→test→  [impl→test→  [impl→test→
+                   verify→      fail→rework→  verify→      verify→
+                   approve→     verify→       approve→     approve→
+                   merge]       approve→      merge]       merge]
+                                merge]
+                       │                         │            │
+Release Timeline:      ·            ·        v0.1.0-alpha    ·
+                       ·            ·            ·        v0.1.0
+```
+
+**Why this matters:**
+
+- **A spec phase does not require a release.** Phase 2 might be pure infrastructure with no user-visible change. It has phases and stages but no version.
+- **A release does not require a new phase.** A hotfix producing v0.1.1 happens within the existing phase structure — it is a patch, not new architectural work.
+- **A failed build stage does not reset the phase.** Phase 3's verification failure and rework are stages within Phase 3, not a new Phase 3.1. The phase is the design scope; stages track the execution within that scope.
+- **Spec versions, phase numbers, and release versions are different numbers.** SPEC.md v1.2 is not related to Phase 2 or release v1.2.0. Using the same number for different concepts guarantees confusion.
+
+#### 5.5 Naming Convention Reference
+
+| Concept | Naming Pattern | Example | Tracked In |
+|---|---|---|---|
+| Spec version | `vN.N` | SPEC.md v1.2 | Spec Changelog |
+| Phase | `phase-N-[name]` | phase-3-api-layer | BUILD_LOG.md, git branch |
+| Stage | `stage: [action]` | stage: verify ✗ FAILED | BUILD_LOG.md |
+| Git branch | `feature/phase-N-[name]` | feature/phase-3-api-layer | Git |
+| Phase tag | `phase-N-complete` | phase-3-complete | Git tag |
+| Release version | `vMAJOR.MINOR.PATCH` | v0.1.0 | Git tag, package registry |
+| Pre-release | `vM.N.P-[label]` | v0.1.0-alpha | Git tag |
+
+---
+
+### 6. Pre-Commit Security
 
 Before pushing code to any remote repository, verify that commits do not contain sensitive information:
 
@@ -311,21 +479,21 @@ This check should be part of the pre-commit hook configuration established in Ph
 
 ---
 
-### 6. Where This Methodology Breaks
+### 7. Where This Methodology Breaks
 
-#### 6.1 Spec Drift
+#### 7.1 Spec Drift
 
 After 3-4 phases, monolithic specs diverge from the codebase. **Mitigation:** Modular specs, machine-readable schemas validated in CI, spec changelog.
 
-#### 6.2 Waterfall Rigidity
+#### 7.2 Waterfall Rigidity
 
 Sequential phases don't accommodate mid-build redesign. **Mitigation:** An iterative loop — spec → build → verify → revise spec → continue. Phase prompts should anticipate revision.
 
-#### 6.3 Architect Bottleneck
+#### 7.3 Architect Bottleneck
 
 One human architect writing all specs becomes a bottleneck. **Mitigation:** Module-level spec fragments. Eventually, a Spec Generator agent produces specifications from high-level intent, reviewed by the human architect before builders execute.
 
-#### 6.4 LLM-Dependent Verification
+#### 7.4 LLM-Dependent Verification
 
 Builder and verifier share the same model's blind spots. **Mitigation:** Layered verification:
 
@@ -340,7 +508,7 @@ Builder and verifier share the same model's blind spots. **Mitigation:** Layered
 
 Verification prompts should progressively become CI jobs.
 
-#### 6.5 Build Log Bloat
+#### 7.5 Build Log Bloat
 
 Large logs exceed context windows. **Mitigation:** Split into BUILD_STATE.md (current, tiny), BUILD_SUMMARY.md (compressed), and archived phase logs.
 
@@ -350,9 +518,9 @@ Large logs exceed context windows. **Mitigation:** Split into BUILD_STATE.md (cu
 
 ---
 
-### 7. Evolution of the .build System
+### 8. Evolution of the .build System
 
-#### 7.1 Current: Static Documents
+#### 8.1 Current: Static Documents
 
 ```
 .build/
@@ -365,7 +533,7 @@ Large logs exceed context windows. **Mitigation:** Split into BUILD_STATE.md (cu
 
 Sufficient for single-developer, single-project builds.
 
-#### 7.2 Near-Term: Active Tooling
+#### 8.2 Near-Term: Active Tooling
 
 ```
 .build/
@@ -409,7 +577,7 @@ Sufficient for single-developer, single-project builds.
 
 **Agent telemetry** tracks token usage, failure modes, and retry patterns. This transforms .build from a control system into a learning system.
 
-#### 7.3 Medium-Term: Externalized State
+#### 8.3 Medium-Term: Externalized State
 
 As projects scale, the .build directory becomes a lightweight interface to a cloud-hosted build state:
 
@@ -426,7 +594,7 @@ All persistent workflow data — build logs, phase history, verification results
 
 This architecture prevents repository bloat, enables real-time collaboration between developers and agents, supports scalable querying of build history, and allows centralized governance for large organizations.
 
-#### 7.4 Integration with Agile Planning Systems
+#### 8.4 Integration with Agile Planning Systems
 
 The .build system exposes integration layers to common planning tools:
 
@@ -442,13 +610,13 @@ This connects agent-driven development with traditional agile planning, ensuring
 
 ---
 
-### 8. Agent Development Runtime (ADR)
+### 9. Agent Development Runtime (ADR)
 
 As the .build system matures, the next logical evolution is transforming it from a static directory into a **runtime environment** that manages and orchestrates software-building agents — an **Agent Development Runtime**.
 
 The ADR acts as the operating system for AI-assisted development workflows. Instead of manually prompting agents and coordinating through documents, the runtime manages agents, tracks system state, executes workflows, and enforces architectural constraints.
 
-#### 8.1 Why a Runtime Is Necessary
+#### 9.1 Why a Runtime Is Necessary
 
 | Problem | Impact |
 |---|---|
@@ -460,7 +628,7 @@ The ADR acts as the operating system for AI-assisted development workflows. Inst
 
 The .build methodology addresses these with structured documents. A runtime system allows these protocols to be **executed automatically** rather than enforced manually.
 
-#### 8.2 Core Capabilities
+#### 9.2 Core Capabilities
 
 **Agent Orchestration:**
 
@@ -504,7 +672,7 @@ NEXT PHASE
 
 Git-like commits for the entire development workflow, not just code. A snapshot captures specification version, build progress, architectural decisions, agent configurations, and verification results. This enables reproducible builds, workflow rollback, experimentation with different agent strategies, and comparison of development approaches.
 
-#### 8.3 Security Model for Agentic Development
+#### 9.3 Security Model for Agentic Development
 
 Once agents run builds autonomously, new security concerns emerge:
 
@@ -535,7 +703,7 @@ The ADR must implement:
 | Reviewer | Evaluate architectural compliance |
 | Observer | Read-only access to project state |
 
-#### 8.4 System Architecture
+#### 9.4 System Architecture
 
 ```
 ┌──────────────────────────────────────────┐
@@ -583,7 +751,7 @@ Just as container orchestration transformed infrastructure management, the ADR c
 
 ---
 
-### 9. Cross-Repository Knowledge
+### 10. Cross-Repository Knowledge
 
 Organizations working on multiple projects benefit from a shared architectural knowledge base:
 
@@ -610,119 +778,102 @@ Agents working across projects access common knowledge, reducing duplication and
 
 ---
 
-### 10. Beyond Software Engineering
+### 11. The Meta-Prompt Ecosystem
 
 The meta-prompt concept — a structured protocol that initializes an environment before task execution — is not limited to software construction. Software engineering is one domain; many others benefit from the same pattern.
 
 A mature development lifecycle involves multiple domains of expertise, each governed by its own meta-prompt. These meta-prompts operate as complementary layers:
 
 ```
-┌─────────────────────────────────────────────┐
-│  LLM-Native Software Engineering             │
-│  (Architecture and application development)  │
-│                                              │
-│  Triggers companion meta-prompts as needed:  │
-└──────┬──────┬──────┬──────┬─────────────────┘
-       │      │      │      │
-       ▼      ▼      ▼      ▼
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│Deployment│ │  DevOps  │ │ Database │ │  UI/UX   │
-│Engineering│ │          │ │          │ │          │
-└──────────┘ └──────────┘ └──────────┘ └──────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  LLM-Native Software Engineering                              │
+│  (Architecture, development methodology,                      │
+│   verification discipline, build protocols)                   │
+│                                                                │
+│  Invokes companion meta-prompts as needed:                    │
+└──┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬───┘
+   │      │      │      │      │      │      │      │      │
+   ▼      ▼      ▼      ▼      ▼      ▼      ▼      ▼      ▼
+┌──────┐┌──────┐┌──────┐┌─────┐┌──────┐┌─────┐┌─────┐┌─────┐┌─────┐
+│Deploy││DevOps││  DB  ││UI/UX││ Sec  ││MLOps││ API ││ Test││ Doc │
+│ Eng  ││      ││      ││     ││ Eng  ││     ││Design││Strat││     │
+└──────┘└──────┘└──────┘└─────┘└──────┘└─────┘└─────┘└─────┘└─────┘
 ```
 
-Each meta-prompt is maintained as an independent, evolving repository. They are invoked by the LLM-Native Software Engineering meta-prompt when their domain becomes relevant during a project's lifecycle.
+Each meta-prompt is maintained as an independent, evolving repository. They are invoked by the LLM-Native Software Engineering meta-prompt when their domain becomes relevant during a project's lifecycle. Every companion follows the same canonical structure: Thesis → When Invoked → Scope → Principles → Practices → Agent Instructions → Integration Points → Anti-Patterns → Quick-Start Checklist.
 
-#### 10.1 Deployment Engineering Meta-Prompt
+#### 11.1 The Complete Ecosystem
 
-**Repository:** https://github.com/pragnakar/Deployment_Engineering
+| Meta-Prompt | Repository | Responsibility | When Invoked |
+|---|---|---|---|
+| **LLM-Native Software Engineering** | [GitHub](https://github.com/pragnakar/LLM_NATIVE_SOFTWARE_ENGINEERING) | Architecture, phased development, verification protocols, build-state tracking | Always — this is the parent methodology |
+| **Deployment Engineering** | [GitHub](https://github.com/pragnakar/Deployment_Engineering) | Docker environments, Kubernetes, CI/CD pipelines, infrastructure as code, secrets management | Before development begins, when infrastructure must be defined |
+| **DevOps** | [GitHub](https://github.com/pragnakar/DevOps) | Runtime operations, monitoring, alerting, incident response, SLOs, reliability engineering | When systems approach production readiness |
+| **Database** | [GitHub](https://github.com/pragnakar/Database) | Technology selection, schema design, indexing, query optimization, backup and recovery | When data persistence decisions are required |
+| **UI/UX** | [GitHub](https://github.com/pragnakar/UI-UX) | User-centered design, information architecture, accessibility, responsive design, design systems | When user-facing interfaces are being designed or built |
+| **Security Engineering** | [GitHub](https://github.com/pragnakar/Security_Engineering) | Threat modeling, secure coding, input validation, cryptography, dependency security, secrets lifecycle | When security requirements need to inform design (always) |
+| **MLOps** | [GitHub](https://github.com/pragnakar/MLOps) | Experiment tracking, data versioning, training pipelines, model registry, drift monitoring, ML governance | When the project includes machine learning models |
+| **API Design** | [GitHub](https://github.com/pragnakar/API_Design) | Resource modeling, versioning, error handling, pagination, rate limiting, OpenAPI specifications | When APIs are being designed or documented |
+| **Testing Strategy** | [GitHub](https://github.com/pragnakar/Testing-Strategy) | Test architecture, coverage strategy, performance testing, contract testing, AI-specific verification | When test planning and coverage standards need to be established |
+| **Documentation** | [GitHub](https://github.com/pragnakar/Documentation) | Technical writing, ADRs, API docs, architecture docs, runbooks, documentation-as-code | When documentation architecture needs to be defined |
 
-**Responsibility:** Defines the runtime and infrastructure environment in which development and deployment take place.
+#### 11.2 Invocation Sequence
 
-**Scope:**
-- Docker-based development environments and container image standards
-- Kubernetes deployment configuration
-- CI/CD pipeline definitions
-- Infrastructure provisioning (Terraform, Pulumi)
-- Environment configuration and secrets management
-- Observability and monitoring setup
-
-**When invoked:** Before or alongside full-scale development, when the project requires a containerized and infrastructure-aware development environment.
-
-**Relationship to this meta-prompt:**
+The meta-prompts have a natural invocation order driven by project lifecycle, though any can be invoked at any time:
 
 ```
-Deployment Engineering Meta-Prompt
-(environment and infrastructure initialization)
-        ↓
-LLM-Native Software Engineering Meta-Prompt
-(architecture and build protocol)
-        ↓
-Continuous Development and Deployment
+Project Start
+     │
+     ├── 1. Deployment Engineering    ← Environment before code
+     ├── 2. LLM-Native Software Eng   ← Architecture and build protocol
+     ├── 3. Database                   ← Data layer design
+     ├── 4. API Design                 ← Interface contracts
+     ├── 5. Security Engineering       ← Threat model and security controls
+     ├── 6. UI/UX                      ← User interface design
+     ├── 7. Testing Strategy           ← Test architecture and coverage
+     ├── 8. Documentation              ← Docs architecture and ADRs
+     │
+     ├── During development:
+     │   └── MLOps                     ← If ML models are involved
+     │
+     └── Approaching production:
+         └── DevOps                    ← Monitoring, alerting, reliability
 ```
 
-#### 10.2 DevOps Meta-Prompt
+#### 11.3 Cross-Cutting Relationships
 
-**Repository:** https://github.com/pragnakar/DevOps
+Meta-prompts are not isolated silos — they form a web of explicit integration points. Each companion defines how it connects to every relevant sibling:
 
-**Responsibility:** Ensures deployed systems remain reliable, observable, and maintainable during runtime operations.
+```
+                    Deployment Engineering
+                   ╱          │           ╲
+            Security     LLM-Native SE     DevOps
+            Engineering   │    │    │      ╱    │
+               │    ╲     │    │    │     ╱     │
+               │     API Design  Database      │
+               │         │    │    │           │
+               │    Testing Strategy           │
+               │              │                │
+               └──── Documentation ────────────┘
+```
 
-**Scope:**
-- Monitoring system health and performance
-- Log collection, analysis, and alerting
-- Anomaly detection and incident response
-- Operational access points for debugging
-- System reliability and resilience practices
-- Recovery procedures
+**Key integration patterns:**
 
-**When invoked:** When systems approach deployment or production readiness.
+- **Security Engineering** touches every meta-prompt — it defines security controls that all other domains implement
+- **Deployment Engineering** and **DevOps** are paired: one provisions infrastructure, the other operates it
+- **API Design** and **Database** are paired: API shapes and database schemas inform each other
+- **Testing Strategy** validates work produced under every other meta-prompt
+- **Documentation** records decisions and knowledge from every domain
 
-#### 10.3 Database Meta-Prompt
+#### 11.4 Independent Evolution
 
-**Repository:** https://github.com/pragnakar/Database
+Each meta-prompt is versioned and maintained independently. This is a deliberate design choice:
 
-**Responsibility:** Guides the selection, configuration, security, and operation of database systems within modern software architectures.
+- A new version of **Database** (adding graph database guidance) does not require a new version of **UI/UX**
+- A major revision of **Security Engineering** does not force an update to **MLOps**
+- Each domain's expertise deepens at its own pace without creating monolithic documents that exceed agent context limits
 
-**Scope:**
-- Selecting appropriate database technology for the workload
-- Schema design and indexing strategies
-- Secure configuration and access controls
-- Backup and recovery strategies
-- Database health monitoring and performance tuning
-
-**When invoked:** When database architecture and configuration decisions are required during system design.
-
-#### 10.4 UI/UX Meta-Prompt
-
-**Repository:** https://github.com/pragnakar/UI-UX
-
-**Responsibility:** Guides the design of user interfaces and experiences so that applications remain intuitive, accessible, and aligned with user workflows.
-
-**Scope:**
-- User-centered interface design
-- Information architecture and navigation
-- Interaction design and user workflows
-- Visual consistency and design systems
-- Responsive design across devices
-- Accessibility and usability best practices
-
-**When invoked:** Whenever user interface and experience design decisions are required.
-
-#### 10.5 The Layered Meta-Prompt Model
-
-Together, these meta-prompts establish a complete lifecycle:
-
-| Meta-Prompt | Responsibility |
-|---|---|
-| LLM-Native Software Engineering | Architecture and application development |
-| Deployment Engineering | Infrastructure provisioning and deployment |
-| DevOps | Runtime operations, monitoring, and reliability |
-| Database | Data persistence, schema design, and management |
-| UI/UX | User interface and experience design |
-
-Each layer evolves independently while integrating through the parent meta-prompt. This separation allows domain expertise to deepen without creating monolithic methodology documents that exceed agent context limits.
-
-**Future meta-prompts** may emerge for additional domains: security engineering, machine learning operations (MLOps), API design, testing strategy, documentation, and others. The pattern is extensible — each new domain adds a new meta-prompt repository that the engineering meta-prompt can invoke.
+The parent meta-prompt (this document) defines the methodology and coordination protocol. Companion meta-prompts define domain-specific practices. The pattern is extensible — each new domain adds a new meta-prompt repository that the engineering meta-prompt can invoke.
 
 ---
 
@@ -730,11 +881,11 @@ Each layer evolves independently while integrating through the parent meta-promp
 
 ---
 
-### 11. Three Emerging Paradigms
+### 12. Three Emerging Paradigms
 
 The industry is exploring three distinct approaches. They haven't converged.
 
-#### 11.1 Spec-Driven (This Methodology)
+#### 12.1 Spec-Driven (This Methodology)
 
 ```
 Human writes spec → Agent implements → Human verifies → Iterate
@@ -742,7 +893,7 @@ Human writes spec → Agent implements → Human verifies → Iterate
 
 **Best for:** Greenfield projects, production-grade output, well-understood domains.
 
-#### 11.2 Repo-Evolution (Cursor / Windsurf Style)
+#### 12.2 Repo-Evolution (Cursor / Windsurf Style)
 
 ```
 Human has codebase → Agent modifies in-place → Human reviews diffs
@@ -750,7 +901,7 @@ Human has codebase → Agent modifies in-place → Human reviews diffs
 
 **Best for:** Brownfield projects, small changes, rapid prototyping.
 
-#### 11.3 Autonomous Agent Swarms
+#### 12.3 Autonomous Agent Swarms
 
 ```
 Human provides goal → Agent swarm designs + builds + tests → Human audits
@@ -762,7 +913,7 @@ All three paradigms benefit from the Three Control Documents. Whether phases are
 
 ---
 
-### 12. The Deeper Shift
+### 13. The Deeper Shift
 
 We are witnessing the emergence of a new layer in software engineering:
 
@@ -856,7 +1007,8 @@ The specification is the contract. The directive is the culture. The build log i
 
 ## Version History
 
-- v3.0 — Current — Added Agent Development Runtime (ADR), security model for agentic development, cross-repository knowledge system, full meta-prompt ecosystem section with companion repositories
+- v4.0 — Current — Added Naming Conventions section (phases, stages, versions as independent timelines), expanded Meta-Prompt Ecosystem to 10 modules (Security Engineering, MLOps, API Design, Testing Strategy, Documentation), updated companion references throughout
+- v3.0 — Added Agent Development Runtime (ADR), security model for agentic development, cross-repository knowledge system, full meta-prompt ecosystem section with companion repositories
 - v2.0 — Added Phase Protocol (prompt → build → verify → approve), verification evidence table from SAGE build, git strategy with phase tags, pre-commit security section
 - v1.0 — Initial publication: Three Control Documents (Directive, Specification, Build Log), .build directory structure, known limitations
 
